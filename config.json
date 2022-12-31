@@ -1,0 +1,12 @@
+{
+  "ankiFields": {
+  "mainKanji": "mainKanji",
+  "mainKana": "mainKana",
+  "partOfSpeech": "partOfSpeech",
+  "gloss": "gloss",
+  "altKanji": "altKanji",
+  "altKana": "altKana",
+  "JMDictID": "JMDictID"
+  },
+  "dictionary": "jmdict-eng-3.2.0-alpha.1.json"
+}
