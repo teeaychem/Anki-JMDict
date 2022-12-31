@@ -38,14 +38,14 @@ def parsePOS(dicEntry):
             partVal += " 〜 "
     partVal = partVal[:-3]
 
-    partVal = re.sub(r'vi', '動詞', partVal)
-    partVal = re.sub(r'vt', '他動詞', partVal)
-    partVal = re.sub(r'n', '名詞', partVal)
+    partVal = re.sub(r'adv-to', '〜と 副詞', partVal)
     partVal = re.sub(r'adj-na', '形容動詞', partVal)
     partVal = re.sub(r'adj-i', '形容詞', partVal)
     partVal = re.sub(r'exp', '言い回し', partVal)
     partVal = re.sub(r'adv', '副詞', partVal)
-    partVal = re.sub(r'adv-to', '〜と 副詞', partVal)
+    partVal = re.sub(r'vi', '動詞', partVal)
+    partVal = re.sub(r'vt', '他動詞', partVal)
+    partVal = re.sub(r'n', '名詞', partVal)
 
     return partVal
 
