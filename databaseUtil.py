@@ -1,3 +1,5 @@
+# Assumes a database from https://github.com/obfusk/jiten formatted for v1.1.0
+
 import sqlite3
 
 mainDict = sqlite3.connect("jmdict.sqlite3")
