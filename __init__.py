@@ -12,6 +12,7 @@ from anki.storage import Collection
 from .util import *
 from .search import *
 from .parse import *
+from .databaseUtil import *
 
 mainKanjiFN = ""
 mainKanaFN = ""
