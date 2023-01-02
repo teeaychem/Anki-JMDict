@@ -17,6 +17,14 @@ class dicEntry:
     self.altKana = []
     self.pitch = ""
 
+
+class idKanjiKanaClass:
+  # def __init__(self, entryID, mainKanji, mainKana, POS, gloss, altKanji, altKana, pitch):
+  def __init__(self, entryID, kanjiList, kanaList):
+    self.entryID = entryID
+    self.kanji = []
+    self.kana = []
+
 def containsKanji(term):
   # https://stackoverflow.com/questions/30069846/how-to-find-out-chinese-or-japanese-character-in-a-string-in-python
   # First hirigana, second katakana
@@ -36,13 +44,6 @@ def getEntryIDS(searchTerm):
     entrySearch = cur.execute("SELECT entry FROM reading WHERE elem='%s'" % searchTerm)
   entryIDs = entrySearch.fetchall()
   return entryIDs
-
-
-def makeIDKanjiKanaList(entryIDList):
-  returnList = []
-  for entryID in entryIDList:
-    returnList.append([entryID, getKanji(entryID), getKana(entryID)])
-  return returnList
 
 
 def getKanji(entryID):
@@ -86,7 +87,7 @@ def cleanEntryList(inList):
   return outList
 
 
-def buildEntryIF(entryID):
+def buildDicEntry(entryID):
   entry = dicEntry(entryID)
 
   # kanji
@@ -112,11 +113,31 @@ def buildEntryIF(entryID):
   return entry
 
 
+
+
+def makeIDKanjiKanaList(entryIDList):
+  returnList = []
+  for entryID in entryIDList:
+    instance = idKanjiKanaClass(entryID, getKanji(entryID), getKana(entryID))
+    returnList.append(instance)
+  return returnList
+
+
+def displayEntries(entryIDs):
+  entryList = makeIDKanjiKanaList(entryIDs)
+  displayList = []
+  for entry in entryList:
+    if entry.kanji != []:
+      print(entry.kanji)
+
+
+
+
 searchTerm = "致命"
 
 def testing(entryID):
 
-  entry = buildEntryIF(entryID)
+  entry = buildDicEntry(entryID)
 
   print(entry.entryID)
   print(entry.mainKanji)
@@ -127,6 +148,7 @@ def testing(entryID):
   print(entry.gloss)
 
 entryIDs = getEntryIDS(searchTerm)
+displayEntries(entryIDs)
 
 # print(makeIDKanjiKanaList(entryIDs))
 

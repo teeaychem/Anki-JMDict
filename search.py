@@ -45,3 +45,4 @@ def displayChoices(resultList):
       choices.append(item["kana"][0]["text"])
 
   return customChooseList("Results", choices)
+
