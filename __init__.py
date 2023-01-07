@@ -1,17 +1,19 @@
 """
     Anki plugin to get JMdict info.
+
+    Assumes a database from https://github.com/obfusk/jiten formatted for v1.1.0
 """
 
 import json
 import os
 import re
+import sqlite3
 from aqt import mw, gui_hooks
 from aqt.utils import showInfo, chooseList, getText
 from aqt.qt import *
 from anki.storage import Collection
 from .util import *
 from .search import *
-from .parse import *
 from .databaseUtil import *
 
 mainKanjiFN = ""
@@ -22,13 +24,13 @@ altKanjiFN = ""
 altKanaFN = ""
 dictIDFN = ""
 
-dic = None
+dicPath = None
 
 configFile = "config.json"
 
 def setDefaults(configFileVar):
 
-    global mainKanjiFN, mainKanaFN, POSFN, glossFN, altKanjiFN, altKanaFN, dictIDFN, dic
+    global mainKanjiFN, mainKanaFN, POSFN, glossFN, altKanjiFN, altKanaFN, dicPath
 
     mainPath = os.path.dirname(__file__)
     configRaw = open(os.path.join(mainPath, configFileVar), encoding='utf-8')
@@ -48,11 +50,8 @@ def setDefaults(configFileVar):
         altKanjiFN = ankiFields['altKanji']
     if ankiFields['altKana']:
         altKanaFN = ankiFields['altKana']
-    if ankiFields['JMDictID']:
-        dictIDFN = ankiFields['JMDictID']
 
-    dicRAW = open(os.path.join(mainPath, "jmdict-eng-3.2.0-alpha.1.json"), encoding='utf-8')
-    dic = json.load(dicRAW)
+    dicPath = os.path.join(mainPath, configJSON['dictionary'])
 
 
 def lookup(editor):
@@ -61,7 +60,7 @@ def lookup(editor):
     if not term_succeeded:
         return
 
-    results = getResults(term, dic)
+    results = getResults(term, dicPath)
     choice = None
 
     if len(results) == 0:
@@ -80,19 +79,17 @@ def lookup(editor):
             for fld, val in editor.note.items()
         ]
 
-        mainKanji = parseMainKanji(entry)
-        mainKana = parseMainKana(entry)
-        if mainKanji != "":
-            updateField(editor, data, mainKanjiFN, mainKanji)
+        if len(entry.kanjiList) > 0:
+            mainKanji = entry.kanjiList[0]
         else:
-            updateField(editor, data, mainKanjiFN, mainKana)
-        updateField(editor, data, mainKanaFN, mainKana)
+            mainKanji = entry.kanaList[0]
+        updateField(editor, data, mainKanjiFN, entry.kanjiList[0])
+        updateField(editor, data, mainKanaFN, entry.kanaList[0])
 
-        updateField(editor, data, POSFN, parsePOS(entry))
-        updateField(editor, data, glossFN, parseGloss(entry))
-        updateField(editor, data, altKanjiFN, parseAltKanji(entry))
-        updateField(editor, data, altKanaFN, parseAltKana(entry))
-        updateField(editor, data, dictIDFN, parseID(entry))
+        updateField(editor, data, POSFN, entry.getPOSHTML())
+        updateField(editor, data, glossFN, entry.getSenseHTML())
+        updateField(editor, data, altKanjiFN, entry.getAltKanjiHTML())
+        updateField(editor, data, altKanaFN, entry.getAltKanaHTML())
 
 
 def addJMdictButton(buttons, editor):

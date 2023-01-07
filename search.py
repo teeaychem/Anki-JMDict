@@ -1,4 +1,5 @@
 from .util import customChooseList
+from .databaseUtil import *
 
 
 def testKanji(term):
@@ -13,36 +14,18 @@ def testKanji(term):
   return False
 
 
-def getResults(term, dicVar):
+def getResults(searchTerm, dicPath):
 
   results = []
+  entryIDs = getEntryIDS(searchTerm, dicPath)
+  results = [dicEntry(entryID, dicPath) for entryID in entryIDs]
 
-  containsKanji = testKanji(term)
 
-  for item in dicVar["words"]:
-
-    if containsKanji == True:
-      for kanji in item["kanji"]:
-        if (kanji["text"] == term):
-          results.append(item)
-    else:
-      for kana in item["kana"]:
-        if (kana["text"] == term):
-          results.append(item)
 
   return results
 
-
 def displayChoices(resultList):
 
-  choices = []
-
-  for item in resultList:
-
-    if (len(item["kanji"]) > 0) and (item["kanji"][0]["text"] != ""):
-      choices.append("%s (%s)" % (item["kanji"][0]["text"], item["kana"][0]["text"]))
-    else:
-      choices.append(item["kana"][0]["text"])
+  choices = makeDisplayEntriesList(resultList)
 
   return customChooseList("Results", choices)
-
