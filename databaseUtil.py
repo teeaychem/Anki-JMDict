@@ -133,7 +133,7 @@ class dicEntry:
     senseList = cur.execute("SELECT * FROM sense WHERE entry='%s' AND lang='eng'" % self.entryID)
     for entry, pos, lang, gloss, info, xref in senseList:
 
-      pos = ", ".join(self.collapseSV(pos.split('\n')))
+      pos = "・".join(self.collapseSV(pos.split('\n')))
 
       if self.JPOSs:
         pos = self.JPOS(pos)
@@ -157,7 +157,11 @@ class dicEntry:
 
     if self.posSenseDict == {}:
       self.fillSenses(cur)
-    self.POSList = [key for key in self.posSenseDict.keys()]
+    posSet = set()
+    for key in self.posSenseDict.keys():
+      for subkey in key.split('・'):
+        posSet.add(subkey)
+    self.POSList = list(posSet)
 
 
   def JPOS(self, part):
@@ -169,13 +173,13 @@ class dicEntry:
     part = re.sub(r'adverb \(fukushi\)', '副詞', part)
     part = re.sub(r'intransitive verb', '動詞', part)
     part = re.sub(r'transitive verb', '他動詞', part)
-    part = re.sub(r'noun \(common\) \(futsuumeishi\)', '名詞 (普通名詞)', part)
+    part = re.sub(r'noun \(common\) \(futsuumeishi\)', '普通名詞', part)
     part = re.sub(r'nouns which may take the genitive case particle \'no\'', '〜の 形容詞', part)
     part = re.sub(r"taru' adjective", '〜たる 形容詞', part)
     part = re.sub(r'particle', '助詞', part)
     part = re.sub(r'suffix', '接尾語', part)
     part = re.sub(r'auxiliary verb', '補助動詞', part)
-    part = re.sub(r'suru verb - included', 'する', part)
+    part = re.sub(r'suru verb - included', 'サ変名詞', part)
     # part = re.sub(r'Godan verb with \'(s|k|r|n|m|g|ts|b)*u\' ending', '五段動詞', part)
     part = re.sub(r'Godan verb.*', '五段動詞', part)
     part = re.sub(r'Ichidan verb.*', '一段動詞', part)

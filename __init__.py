@@ -83,7 +83,7 @@ def lookup(editor):
             mainKanji = entry.kanjiList[0]
         else:
             mainKanji = entry.kanaList[0]
-        updateField(editor, data, mainKanjiFN, entry.kanjiList[0])
+        updateField(editor, data, mainKanjiFN, mainKanji)
         updateField(editor, data, mainKanaFN, entry.kanaList[0])
 
         updateField(editor, data, POSFN, entry.getPOSHTML())
