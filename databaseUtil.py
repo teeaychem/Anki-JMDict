@@ -182,7 +182,7 @@ class dicEntry:
     part = re.sub(r'suru verb - included', 'サ変名詞', part)
     part = re.sub(r'Godan verb with \'(s|k|r|n|m|g|ts|b)*u\' ending', '五段動詞', part)
     part = re.sub(r'Godan verb with \'(s|k|r|n|m|g|ts|b)*u\' ending', '五段動詞', part)
-    part = re.sub(r'Ichidan verb with \'(s|k|r|n|m|g|ts|b)*u\' ending', '一段動詞', part)
+    part = re.sub(r'Ichidan verb', '一段動詞', part)
     part = re.sub(r'pre-noun adjectival \(rentaishi\)', '連体詞', part)
     part = re.sub(r'pronoun', '代名詞', part)
     part = re.sub(r'interjection \(kandoushi\)', '感動詞', part)
