@@ -29,10 +29,13 @@ class dicEntry:
 
   def getSenseHTML(self):
 
-    HTML = ""
-    counter = 0
+    HTMLSpanPrefix = "xyz"
+
+    HTML = ''
     for key in self.posSenseDict.keys():
-      HTML += '<SPAN STYLE="opacity:0.75;">%s</SPAN> ' % key
+
+      commonSenseString = ""
+      sensesString = ""
 
       # Collect common info to display next to pos.
       for sense in self.posSenseDict[key]:
@@ -43,35 +46,45 @@ class dicEntry:
 
       # Display common info next to pos.
       if len(commonInfo) > 0:
-        HTML  += '<SPAN STYLE="opacity:0.5;"> '
         for commonSensePart in commonInfo:
           if self.JPOSs:
             commonSensePart = self.JInfo(commonSensePart)
-          HTML += commonSensePart + ", "
-        HTML = HTML[:-2]
-        HTML  += "</SPAN>"
+          commonSenseString += commonSensePart + ", "
+        commonSenseString = commonSenseString[:-2]
 
-      HTML += '<br><p style="margin-left: 25px;">'
+
+      # Ordered list, each item is a sense
 
       for sense in self.posSenseDict[key]:
 
-        counter += 1
-        HTML += str(counter) + ". "
+        senseString = ""
+        senseInfoString = ""
+
         for glossPart in sense.gloss:
-          HTML += glossPart + ", "
-        HTML = HTML[:-2]
+          senseString += glossPart + ", "
+
+        senseString = f'<span class="{HTMLSpanPrefix + "Sense"}">{senseString[:-2]}</span>'
 
         # Display any non-common info next to gloss.
         if len(sense.info) > 0:
-          specificInfoString = ""
           for sensePart in sense.info:
             if sensePart not in commonInfo:
-              specificInfoString += sensePart + ", "
-          if specificInfoString != "":
-            HTML += ' ( <SPAN STYLE="opacity:0.75;"><i>' + specificInfoString[:-2] + '</i></SPAN>)'
-        HTML += "<br>"
+              senseInfoString += sensePart + ", "
+          if senseInfoString != "":
+            senseInfoString = f' <span class="{HTMLSpanPrefix + "SenseInf"}">{senseInfoString[:-2]}</span>'
 
-      HTML = HTML[:-4] + "</p>"
+        sensesString += f"<li>{senseString}{senseInfoString}</li>"
+
+      HTML += f"""
+        <span class="{HTMLSpanPrefix + "POS"}">{key}</span>
+        <span class="{HTMLSpanPrefix + "POSCInf"}">{commonSenseString}</span>\n
+        <div class="container">
+        <ol class="{HTMLSpanPrefix + "SenseList"}">
+        {sensesString}
+        </ol>
+        </div>
+      """
+
 
     return HTML
 
@@ -123,7 +136,7 @@ class dicEntry:
         posList.remove("intransitive verb")
       verbs = verbs[:-2]
       if verbs != "":
-        newSuru = "suru verb - included (%s)" % verbs
+        newSuru = f"suru verb - included ({verbs})"
         posList = [newSuru if item == "suru verb - included" else item for item in posList]
 
     return posList
@@ -227,9 +240,6 @@ class idKanjiKanaClass:
     self.kana = kanaList
 
 
-
-
-
 def getEntryIDS(searchTerm, dicPath):
   # Search a string, return list of entryIDs
   dictionary = sqlite3.connect(dicPath)
@@ -243,6 +253,20 @@ def getEntryIDS(searchTerm, dicPath):
   entryIDs = entrySearch.fetchall()
   return entryIDs
 
+
+def getKanjiKanaEntryIDS(kanji, kana, dicPath):
+
+  dictionary = sqlite3.connect(dicPath)
+  cur = dictionary.cursor()
+
+  if containsKanji(kanji):
+    kanjiIDs = cur.execute("SELECT entry FROM kanji WHERE elem='%s'" % kanji).fetchall()
+    kanaIDs = cur.execute("SELECT entry FROM reading WHERE elem='%s'" % kana).fetchall()
+    common = [entryID for entryID in kanjiIDs if entryID in kanaIDs]
+  else:
+    common = cur.execute("SELECT entry FROM reading WHERE elem='%s'" % kana).fetchall()
+
+  return common
 
 
 def makeIDKanjiKanaList(entryIDList):

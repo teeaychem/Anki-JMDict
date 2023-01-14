@@ -79,17 +79,46 @@ def lookup(editor):
             for fld, val in editor.note.items()
         ]
 
-        if len(entry.kanjiList) > 0:
-            mainKanji = entry.kanjiList[0]
-        else:
-            mainKanji = entry.kanaList[0]
-        updateField(editor, data, mainKanjiFN, mainKanji)
-        updateField(editor, data, mainKanaFN, entry.kanaList[0])
+    fillFields(editor, entry, data)
 
-        updateField(editor, data, POSFN, entry.getPOSHTML())
-        updateField(editor, data, glossFN, entry.getSenseHTML())
-        updateField(editor, data, altKanjiFN, entry.getAltKanjiHTML())
-        updateField(editor, data, altKanaFN, entry.getAltKanaHTML())
+
+def fillFields(editor, entry, data):
+
+    if len(entry.kanjiList) > 0:
+            mainKanji = entry.kanjiList[0]
+    else:
+        mainKanji = entry.kanaList[0]
+    updateField(editor, data, mainKanjiFN, mainKanji)
+    updateField(editor, data, mainKanaFN, entry.kanaList[0])
+
+    updateField(editor, data, POSFN, entry.getPOSHTML())
+    updateField(editor, data, glossFN, entry.getSenseHTML())
+    updateField(editor, data, altKanjiFN, entry.getAltKanjiHTML())
+    updateField(editor, data, altKanaFN, entry.getAltKanaHTML())
+
+def byKanjiKana(editor):
+
+    data = [
+            (fld, editor.mw.col.media.escapeImages(val))
+            for fld, val in editor.note.items()
+        ]
+
+    kanjiText = ""
+    kanaText = ""
+
+    for i in range(len(data)):
+        if data[i][0] == mainKanjiFN:
+            kanjiText = data[i][1]
+        if data[i][0] == mainKanaFN:
+            kanaText = data[i][1]
+
+    results = getKanjiKanaEntryIDS(kanjiText, kanaText, dicPath)
+
+    if len(results) == 1:
+        entry = dicEntry(results[0], dicPath)
+        fillFields(editor, entry, data)
+
+    return None
 
 
 def addJMdictButton(buttons, editor):
