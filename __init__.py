@@ -282,35 +282,39 @@ def updateNote_all_entryID(noteID):
     # Figure out the index of the entryID field
     eID_idx = mw.col.db.first('SELECT ord FROM fields WHERE name = ? AND ntid IN (SELECT mid FROM notes WHERE id = ?)', entryIDFN , noteID)[0]
 
-    entry = dicEntry(fields[eID_idx], dicPath)
+    entryID = fields[eID_idx]
 
-    # Figure out mainKanji
-    mainKanji_idx = mw.col.db.first('SELECT ord FROM fields WHERE name = ? AND ntid IN (SELECT mid FROM notes WHERE id = ?)', mainKanjiFN, noteID)[0]
-    # Etc.
-    mainKana_idx = mw.col.db.first('SELECT ord FROM fields WHERE name = ? AND ntid IN (SELECT mid FROM notes WHERE id = ?)', mainKanaFN, noteID)[0]
-    POS_idx = mw.col.db.first('SELECT ord FROM fields WHERE name = ? AND ntid IN (SELECT mid FROM notes WHERE id = ?)', POSFN, noteID)[0]
-    gloss_idx = mw.col.db.first('SELECT ord FROM fields WHERE name = ? AND ntid IN (SELECT mid FROM notes WHERE id = ?)', glossFN, noteID)[0]
-    altKanjiFN_idx = mw.col.db.first('SELECT ord FROM fields WHERE name = ? AND ntid IN (SELECT mid FROM notes WHERE id = ?)', altKanjiFN, noteID)[0]
-    altKanaFN_idx = mw.col.db.first('SELECT ord FROM fields WHERE name = ? AND ntid IN (SELECT mid FROM notes WHERE id = ?)', altKanaFN, noteID)[0]
+    if entryID != "":
+
+        entry = dicEntry(entryID, dicPath)
+
+        # Figure out mainKanji
+        mainKanji_idx = mw.col.db.first('SELECT ord FROM fields WHERE name = ? AND ntid IN (SELECT mid FROM notes WHERE id = ?)', mainKanjiFN, noteID)[0]
+        # Etc.
+        mainKana_idx = mw.col.db.first('SELECT ord FROM fields WHERE name = ? AND ntid IN (SELECT mid FROM notes WHERE id = ?)', mainKanaFN, noteID)[0]
+        POS_idx = mw.col.db.first('SELECT ord FROM fields WHERE name = ? AND ntid IN (SELECT mid FROM notes WHERE id = ?)', POSFN, noteID)[0]
+        gloss_idx = mw.col.db.first('SELECT ord FROM fields WHERE name = ? AND ntid IN (SELECT mid FROM notes WHERE id = ?)', glossFN, noteID)[0]
+        altKanjiFN_idx = mw.col.db.first('SELECT ord FROM fields WHERE name = ? AND ntid IN (SELECT mid FROM notes WHERE id = ?)', altKanjiFN, noteID)[0]
+        altKanaFN_idx = mw.col.db.first('SELECT ord FROM fields WHERE name = ? AND ntid IN (SELECT mid FROM notes WHERE id = ?)', altKanaFN, noteID)[0]
 
 
-    if len(entry.kanjiList) > 0:
-        fields[mainKanji_idx] = entry.kanjiList[0]
-    else:
-        fields[mainKanji_idx] = entry.kanaList[0]
+        if len(entry.kanjiList) > 0:
+            fields[mainKanji_idx] = entry.kanjiList[0]
+        else:
+            fields[mainKanji_idx] = entry.kanaList[0]
 
-    fields[mainKana_idx] = entry.kanaList[0]
-    fields[POS_idx] = entry.getPOSHTML()
-    fields[gloss_idx] = entry.getSenseHTML()
-    fields[altKanjiFN_idx] = entry.getAltKanjiHTML()
-    fields[altKanaFN_idx] = entry.getAltKanaHTML()
+        fields[mainKana_idx] = entry.kanaList[0]
+        fields[POS_idx] = entry.getPOSHTML()
+        fields[gloss_idx] = entry.getSenseHTML()
+        fields[altKanjiFN_idx] = entry.getAltKanjiHTML()
+        fields[altKanaFN_idx] = entry.getAltKanaHTML()
 
-    newFieldsStr = '\x1f'.join(fields)
-    mod_time = int(time.time())
-    mw.col.db.execute(
-        'UPDATE notes SET usn = ?, mod = ?, flds = ? WHERE id = ?',
-        -1, mod_time, newFieldsStr, noteID
-        )
+        newFieldsStr = '\x1f'.join(fields)
+        mod_time = int(time.time())
+        mw.col.db.execute(
+            'UPDATE notes SET usn = ?, mod = ?, flds = ? WHERE id = ?',
+            -1, mod_time, newFieldsStr, noteID
+            )
 
 
 

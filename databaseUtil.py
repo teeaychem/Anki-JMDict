@@ -36,35 +36,41 @@ class dicEntry:
 
     for key in self.posSenseDict.keys():
 
+      # Set for collecting info that applies to all senses.
+      # Start with initial sense
+      commonSenseInfo = set((self.posSenseDict[key][0]).info)
+      # Now, take the intersection with all other senses
+      for sense in self.posSenseDict[key]:
+        commonSenseInfo = commonSenseInfo.intersection(set(sense.info))
+      # This happens, and preference for less clutter
+      commonSenseString = ", ".join([self.JInfo(inf) for inf in commonSenseInfo])
+
       sensesString = ""
-      commonInfo = set()
 
       for sense in self.posSenseDict[key]:
 
-        for sensePart in sense.info:
-          commonInfo.add(sensePart)
-
         senseString = f'<span class="{HTMLSpanPrefix + "Sense"}">{", ".join(sense.gloss)}</span>'
 
-        # Display any non-common info next to gloss.
-        senseInfoString = ""
+        uniqueInfo = []
+        for info in sense.info:
+          if info not in commonSenseInfo:
+            uniqueInfo.append(info)
 
-        if len(sense.info) > 0:
-          uniqueSenseInf = []
-          for sensePart in sense.info:
-            if sensePart not in commonInfo:
-              uniqueSenseInf.add(self.JInfo(sensePart))
-          if len(uniqueSenseInf) > 0:
-            senseInfoString = f' <span class="{HTMLSpanPrefix + "SenseInf"}">({", ".join(uniqueSenseInf)})</span>'
+        sensesInfoPreString = ", ".join([self.JInfo(inf) for inf in uniqueInfo])
 
+        if sensesInfoPreString != "":
+          sensesInfoPreString = f"({sensesInfoPreString})"
+        senseInfoString = f' <span class="{HTMLSpanPrefix + "SenseInf"}">{sensesInfoPreString}</span>'
+
+        # Each sense is written as item of ordered list
         sensesString += f"<li>{senseString}{senseInfoString}</li>"
-      commonSenseString = ", ".join([self.JInfo(inf) for inf in commonInfo])
 
+      # Add HTML for particular sense
       HTMLSenses.append(f"""
         <span class "{HTMLSpanPrefix + "Sense"}">
         <span class="{HTMLSpanPrefix + "POS"}">{key}</span>
+        <span class="{HTMLSpanPrefix + "POSCInf"}">{commonSenseString}</span>
         <br>
-        <span class="{HTMLSpanPrefix + "POSCInf"}">{commonSenseString}</span>\n
         <ol class="{HTMLSpanPrefix + "SenseList"}">
         {sensesString}
         </ol>
