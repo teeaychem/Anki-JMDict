@@ -32,7 +32,7 @@ class dicEntry:
     # See end of loop for HTML for each distinct sense.
 
     HTMLSpanPrefix = "xyz"
-    HTML = ""
+    HTMLSenses = []
 
     for key in self.posSenseDict.keys():
 
@@ -60,15 +60,19 @@ class dicEntry:
         sensesString += f"<li>{senseString}{senseInfoString}</li>"
       commonSenseString = ", ".join([self.JInfo(inf) for inf in commonInfo])
 
-      HTML += f"""
+      HTMLSenses.append(f"""
         <span class "{HTMLSpanPrefix + "Sense"}">
         <span class="{HTMLSpanPrefix + "POS"}">{key}</span>
+        <br>
         <span class="{HTMLSpanPrefix + "POSCInf"}">{commonSenseString}</span>\n
         <ol class="{HTMLSpanPrefix + "SenseList"}">
         {sensesString}
         </ol>
         </span>
       """
+      )
+
+    HTML = "<br>".join(HTMLSenses)
 
     return HTML
 
