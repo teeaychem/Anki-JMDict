@@ -63,3 +63,19 @@ def containsKanji(term):
     if any([range["from"] <= ord(char) <= range["to"] for range in ranges]) == False:
       return True
   return False
+
+
+
+
+
+def select_deck_id(msg):
+    decks = []
+    for row in mw.col.db.execute('SELECT id, name FROM decks'):
+        d_id = row[0]
+        d_name = row[1]
+        decks.append((d_id, d_name))
+    choices = [deck[1] for deck in decks]
+    choice = customChooseList(msg, choices)
+    if choice == None:
+        return None
+    return decks[choice][0]

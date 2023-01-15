@@ -16,6 +16,8 @@ from .util import *
 from .search import *
 from .databaseUtil import *
 
+import time
+
 mainKanjiFN = ""
 mainKanaFN = ""
 POSFN = ""
@@ -82,10 +84,10 @@ def lookup(editor):
             for fld, val in editor.note.items()
         ]
 
-    fillFields(editor, entry, data)
+    fillAllFields(editor, entry, data)
 
 
-def fillFields(editor, entry, data):
+def fillAllFields(editor, entry, data):
 
     if len(entry.kanjiList) > 0:
             mainKanji = entry.kanjiList[0]
@@ -100,7 +102,7 @@ def fillFields(editor, entry, data):
     updateField(editor, data, altKanaFN, entry.getAltKanaHTML())
     updateField(editor, data, entryIDFN, entry.getEntryID())
 
-def byKanjiKana(editor):
+def fillAllFieldsByKanjiKana(editor):
 
     data = [
             (fld, editor.mw.col.media.escapeImages(val))
@@ -120,9 +122,33 @@ def byKanjiKana(editor):
 
     if len(results) == 1:
         entry = dicEntry(results[0], dicPath)
-        fillFields(editor, entry, data)
+        fillAllFields(editor, entry, data)
 
-def byEntryID(editor):
+
+def fillEntryIDByKanjiKana(editor):
+
+    data = [
+            (fld, editor.mw.col.media.escapeImages(val))
+            for fld, val in editor.note.items()
+        ]
+
+    kanjiText = ""
+    kanaText = ""
+
+    for i in range(len(data)):
+        if data[i][0] == mainKanjiFN:
+            kanjiText = data[i][1]
+        if data[i][0] == mainKanaFN:
+            kanaText = data[i][1]
+
+    results = getKanjiKanaEntryIDS(kanjiText, kanaText, dicPath)
+
+    if len(results) == 1:
+        entry = dicEntry(results[0], dicPath)
+        updateField(editor, data, entryIDFN, entry.getEntryID())
+
+
+def fillAllFieldsbyEntryID(editor):
 
     eID = ""
 
@@ -138,8 +164,7 @@ def byEntryID(editor):
     if eID != "":
 
         entry = dicEntry(eID, dicPath)
-        fillFields(editor, entry, data)
-
+        fillAllFields(editor, entry, data)
 
 def addJMdictButton(buttons, editor):
     # environment
@@ -159,8 +184,88 @@ def addJMdictButton(buttons, editor):
                          )
     buttons.append(btn)
 
+
+
+def addEntryIDByMainKanjiKana():
+
+    deckID = select_deck_id('Which deck would you like to add IDs to?')
+    if deckID == None:
+        return
+    note_type_ids = getNoteTypes(deckID)
+    # TODO add new note ids
+    noteTypeID = note_type_ids[0]
+    noteIDs = getNoteIDs(deckID, noteTypeID)
+    for noteID in noteIDs:
+        updateNote_entryID_KanjiKana(noteID)
+
+
+def getNoteIDs(deckID, noteTypeID):
+
+    noteIDs = []
+    for row in mw.col.db.execute(
+        'SELECT id FROM notes WHERE mid = ? AND id IN (SELECT nid FROM'
+        ' cards WHERE did = ?) ORDER BY id', noteTypeID, deckID):
+        nid = row[0]
+        noteIDs.append(nid)
+    return noteIDs
+
+
+def getNoteTypes(deckID):
+
+    noteTypes = []
+
+    for row in mw.col.db.execute(
+        'SELECT distinct mid FROM notes WHERE id IN (SELECT nid FROM'
+        ' cards WHERE did = ?) ORDER BY id', deckID):
+        mid = row[0]
+        noteTypes.append(mid)
+
+    return noteTypes
+
+
+def updateNote_entryID_KanjiKana(noteID):
+
+    # All fields are bundled
+    row = mw.col.db.first(
+            'SELECT flds FROM notes WHERE id = ?', noteID
+            )
+    flds_str = row[0]
+    # \x1f to separate bundled fields
+    fields = flds_str.split('\x1f')
+
+    # Figure out mainKanji
+    mainKanji_idx = mw.col.db.first('SELECT ord FROM fields WHERE name = ? AND ntid IN (SELECT mid FROM notes WHERE id = ?)', mainKanjiFN, noteID)[0]
+    # Figure out mainKana
+    mainKana_idx = mw.col.db.first('SELECT ord FROM fields WHERE name = ? AND ntid IN (SELECT mid FROM notes WHERE id = ?)', mainKanaFN, noteID)[0]
+    # Figure out the index of the entryID field
+    eID_idx = mw.col.db.first('SELECT ord FROM fields WHERE name = ? AND ntid IN (SELECT mid FROM notes WHERE id = ?)', entryIDFN , noteID)[0]
+
+    mainKanji_str = fields[mainKanji_idx]
+    mainKana_str = fields[mainKana_idx]
+
+    entryIDs = getKanjiKanaEntryIDS(mainKanji_str, mainKana_str, dicPath)
+    if len(entryIDs) == 1:
+
+        fields[eID_idx] = str(entryIDs[0][0])
+
+        newFieldsStr = '\x1f'.join(fields)
+        mod_time = int(time.time())
+        mw.col.db.execute(
+            'UPDATE notes SET usn = ?, mod = ?, flds = ? WHERE id = ?',
+            -1, mod_time, newFieldsStr, noteID
+            )
+
+
 # add editor button
 gui_hooks.editor_did_init_buttons.append(addJMdictButton)
+
+sJDI_menu = QMenu('Simple JDI', mw)
+
+sJDI_menu_test = sJDI_menu.addAction('Add EntryIDs to notes by main kanji and kana')
+sJDI_menu_test.triggered.connect(addEntryIDByMainKanjiKana)
+
+mw.form.menuTools.addMenu(sJDI_menu)
+
 
 
 setDefaults(configFile)
