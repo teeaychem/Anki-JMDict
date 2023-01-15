@@ -23,6 +23,7 @@ glossFN = ""
 altKanjiFN = ""
 altKanaFN = ""
 dictIDFN = ""
+entryIDFN = ""
 
 dicPath = None
 
@@ -30,7 +31,7 @@ configFile = "config.json"
 
 def setDefaults(configFileVar):
 
-    global mainKanjiFN, mainKanaFN, POSFN, glossFN, altKanjiFN, altKanaFN, dicPath
+    global mainKanjiFN, mainKanaFN, POSFN, glossFN, altKanjiFN, altKanaFN, dicPath, entryIDFN
 
     mainPath = os.path.dirname(__file__)
     configRaw = open(os.path.join(mainPath, configFileVar), encoding='utf-8')
@@ -50,6 +51,8 @@ def setDefaults(configFileVar):
         altKanjiFN = ankiFields['altKanji']
     if ankiFields['altKana']:
         altKanaFN = ankiFields['altKana']
+    if ankiFields['id']:
+        entryIDFN = ankiFields['id']
 
     dicPath = os.path.join(mainPath, configJSON['dictionary'])
 
@@ -89,12 +92,13 @@ def fillFields(editor, entry, data):
     else:
         mainKanji = entry.kanaList[0]
     updateField(editor, data, mainKanjiFN, mainKanji)
-    updateField(editor, data, mainKanaFN, entry.kanaList[0])
 
+    updateField(editor, data, mainKanaFN, entry.kanaList[0])
     updateField(editor, data, POSFN, entry.getPOSHTML())
     updateField(editor, data, glossFN, entry.getSenseHTML())
     updateField(editor, data, altKanjiFN, entry.getAltKanjiHTML())
     updateField(editor, data, altKanaFN, entry.getAltKanaHTML())
+    updateField(editor, data, entryIDFN, entry.getEntryID())
 
 def byKanjiKana(editor):
 
@@ -118,7 +122,23 @@ def byKanjiKana(editor):
         entry = dicEntry(results[0], dicPath)
         fillFields(editor, entry, data)
 
-    return None
+def byEntryID(editor):
+
+    eID = ""
+
+    data = [
+            (fld, editor.mw.col.media.escapeImages(val))
+            for fld, val in editor.note.items()
+        ]
+
+    for i in range(len(data)):
+        if data[i][0] == entryIDFN:
+            eID = data[i][1]
+
+    if eID != "":
+
+        entry = dicEntry(eID, dicPath)
+        fillFields(editor, entry, data)
 
 
 def addJMdictButton(buttons, editor):

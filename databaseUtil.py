@@ -231,6 +231,9 @@ class dicEntry:
   def getMainKana(self):
     return self.kanaList[0]
 
+  def getEntryID(self):
+    return str(self.entryID)
+
 
 class idKanjiKanaClass:
   # def __init__(self, entryID, mainKanji, mainKana, POS, gloss, altKanji, altKana, pitch):
@@ -251,7 +254,9 @@ def getEntryIDS(searchTerm, dicPath):
   else:
     entrySearch = cur.execute("SELECT entry FROM reading WHERE elem='%s'" % searchTerm)
   entryIDs = entrySearch.fetchall()
-  return entryIDs
+  # Get the actual id, rather than '(id,)'.
+  # Things work fine without this apart from lookup by entryID
+  return [id[0] for id in entryIDs]
 
 
 def getKanjiKanaEntryIDS(kanji, kana, dicPath):

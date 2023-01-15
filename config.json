@@ -5,7 +5,8 @@
   "partOfSpeech": "partOfSpeech",
   "gloss": "gloss",
   "altKanji": "altKanji",
-  "altKana": "altKana"
+  "altKana": "altKana",
+  "id": "entryId"
   },
   "dictionary": "jmdict.sqlite3"
 }
