@@ -8,5 +8,5 @@
   "altKana": "altKana",
   "id": "entryId"
   },
-  "dictionary": "jmdict.sqlite3"
+  "dictionary": "jamdict.db"
 }

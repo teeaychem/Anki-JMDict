@@ -107,12 +107,12 @@ class dicEntry:
 
   def fillKana(self, cur):
 
-    kanaList = cur.execute("SELECT elem FROM reading WHERE entry='%s'" % self.entryID).fetchall()
+    kanaList = cur.execute("SELECT text FROM Kana WHERE idseq='%s'" % self.entryID).fetchall()
     for i in range(0, len(kanaList)):
       self.kanaList.append(kanaList[i][0])
 
   def fillKanji(self, cur):
-    kanjiList = cur.execute("SELECT elem, chars FROM kanji WHERE entry='%s'" % self.entryID).fetchall()
+    kanjiList = cur.execute("SELECT text FROM Kanji WHERE idseq='%s'" % self.entryID).fetchall()
     for i in range(0, len(kanjiList)):
       self.kanjiList.append(kanjiList[i][0])
 
@@ -137,22 +137,26 @@ class dicEntry:
 
   def fillSenses(self, cur):
 
-    senseList = cur.execute("SELECT * FROM sense WHERE entry='%s' AND lang='eng'" % self.entryID)
+    senseIDs = cur.execute("SELECT ID FROM Sense WHERE idseq='%s'" % self.entryID).fetchall()
 
-    for entry, pos, lang, gloss, info, xref in senseList:
+    senseList = []
 
-      pos = "・".join(self.collapseSV(pos.split('\n')))
+    for senseID in senseIDs:
 
+      senseText = [i[0] for i in cur.execute("SELECT text FROM SenseGloss WHERE sid='%s' AND lang='eng'" % senseID).fetchall()]
+      posText = [i[0] for i in cur.execute("SELECT text FROM pos WHERE sid='%s'" % senseID).fetchall()]
+      senseInfoText = [i[0] for i in cur.execute("SELECT text FROM SenseInfo WHERE sid='%s'" % senseID).fetchall()]
+
+      pos = "・".join(self.collapseSV(posText))
       pos = re.sub(r'\n', '・', self.JPOS(pos))
 
       senseList = self.posSenseDict.get(pos, list())
 
-      senseItem = Sense(entry)
+      senseItem = Sense(self.entryID)
 
       senseItem.pos = pos
-      senseItem.gloss = gloss.split("\n")
-      if len(info) > 0:
-        senseItem.info = info.split("\n")
+      senseItem.gloss = senseText
+      senseItem.info = senseInfoText
 
       senseList.append(senseItem)
 
@@ -246,9 +250,9 @@ def getEntryIDS(searchTerm, dicPath):
 
 
   if containsKanji(searchTerm):
-    entrySearch = cur.execute("SELECT entry FROM kanji WHERE elem='%s'" % searchTerm)
+    entrySearch = cur.execute("SELECT idseq FROM Kanji WHERE text='%s'" % searchTerm)
   else:
-    entrySearch = cur.execute("SELECT entry FROM reading WHERE elem='%s'" % searchTerm)
+    entrySearch = cur.execute("SELECT idseq FROM Kana WHERE text='%s'" % searchTerm)
   entryIDs = entrySearch.fetchall()
   # Get the actual id, rather than '(id,)'.
   # Things work fine without this apart from lookup by entryID
@@ -261,11 +265,11 @@ def getKanjiKanaEntryIDS(kanji, kana, dicPath):
   cur = dictionary.cursor()
 
   if containsKanji(kanji):
-    kanjiIDs = cur.execute("SELECT entry FROM kanji WHERE elem='%s'" % kanji).fetchall()
-    kanaIDs = cur.execute("SELECT entry FROM reading WHERE elem='%s'" % kana).fetchall()
+    kanjiIDs = cur.execute("SELECT idseq FROM Kanji WHERE text='%s'" % kanji).fetchall()
+    kanaIDs = cur.execute("SELECT idseq FROM Kana WHERE text='%s'" % kana).fetchall()
     common = [entryID for entryID in kanjiIDs if entryID in kanaIDs]
   else:
-    common = cur.execute("SELECT entry FROM reading WHERE elem='%s'" % kana).fetchall()
+    common = cur.execute("SELECT idseq FROM Kana WHERE text='%s'" % kana).fetchall()
 
   return common
 

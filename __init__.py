@@ -6,316 +6,214 @@
 
 import json
 import os
-import re
-import sqlite3
 from aqt import mw, gui_hooks
-from aqt.utils import showInfo, chooseList, getText
+from aqt.utils import showInfo, getText
 from aqt.qt import *
 from anki.storage import Collection
 from .util import *
-from .search import *
+from .ankiInteraction import *
 from .databaseUtil import *
 
-import time
+class Config:
+	def __init__(self):
+		self.mainKanjiFN = ""
+		self.mainKanaFN = ""
+		self.POSFN = ""
+		self.glossFN = ""
+		self.altKanjiFN = ""
+		self.altKanaFN = ""
+		self.entryIDFN = ""
+		self.dicPath = ""
 
-mainKanjiFN = ""
-mainKanaFN = ""
-POSFN = ""
-glossFN = ""
-altKanjiFN = ""
-altKanaFN = ""
-entryIDFN = ""
+	def setByJSON(self, configName):
 
-dicPath = None
+		mainPath = os.path.dirname(__file__)
+		configRaw = open(os.path.join(mainPath, configName), encoding='utf-8')
+		configJSON = json.load(configRaw)
+
+		ankiFields = configJSON['ankiFields']
+
+		if ankiFields['mainKanji']:
+			self.mainKanjiFN = ankiFields['mainKanji']
+		if ankiFields['mainKana']:
+			self.mainKanaFN = ankiFields['mainKana']
+		if ankiFields['partOfSpeech']:
+			self.POSFN = ankiFields['partOfSpeech']
+		if ankiFields['gloss']:
+			self.glossFN = ankiFields['gloss']
+		if ankiFields['altKanji']:
+			self.altKanjiFN = ankiFields['altKanji']
+		if ankiFields['altKana']:
+			self.altKanaFN = ankiFields['altKana']
+		if ankiFields['id']:
+			self.entryIDFN = ankiFields['id']
+
+		self.dicPath = os.path.join(mainPath, configJSON['dictionary'])
+
+
 
 configFile = "config.json"
 
-def setDefaults(configFileVar):
+mainConfig = Config()
+mainConfig.setByJSON(configFile)
 
-    global mainKanjiFN, mainKanaFN, POSFN, glossFN, altKanjiFN, altKanaFN, dicPath, entryIDFN
 
-    mainPath = os.path.dirname(__file__)
-    configRaw = open(os.path.join(mainPath, configFileVar), encoding='utf-8')
-    configJSON = json.load(configRaw)
+def getResults(searchTerm, config):
 
-    ankiFields = configJSON['ankiFields']
+	results = []
+	entryIDs = getEntryIDS(searchTerm, config.dicPath)
+	results = [dicEntry(entryID, config.dicPath) for entryID in entryIDs]
 
-    if ankiFields['mainKanji']:
-        mainKanjiFN = ankiFields['mainKanji']
-    if ankiFields['mainKana']:
-        mainKanaFN = ankiFields['mainKana']
-    if ankiFields['partOfSpeech']:
-        POSFN = ankiFields['partOfSpeech']
-    if ankiFields['gloss']:
-        glossFN = ankiFields['gloss']
-    if ankiFields['altKanji']:
-        altKanjiFN = ankiFields['altKanji']
-    if ankiFields['altKana']:
-        altKanaFN = ankiFields['altKana']
-    if ankiFields['id']:
-        entryIDFN = ankiFields['id']
-
-    dicPath = os.path.join(mainPath, configJSON['dictionary'])
+	return results
 
 
 def lookup(editor):
 
-    term, term_succeeded = getText('Enter a word. (Example: 探検)')
-    if not term_succeeded:
-        return
+	term, term_succeeded = getText('Enter a word. (Example: 探検)')
+	if not term_succeeded:
+		return
 
-    results = getResults(term, dicPath)
-    choice = None
+	results = getResults(term, mainConfig)
+	choice = None
 
-    if len(results) == 0:
-        showInfo(("No results found"))
-    elif len(results) == 1:
-        choice = 0
-    elif len(results) > 1:
-        choice = displayChoices(results)
+	if len(results) == 0:
+		showInfo(("No results found"))
+	elif len(results) == 1:
+		choice = 0
+	elif len(results) > 1:
+		choice = displayChoices(results)
 
-    if choice != None:
-
-        entry = results[choice]
-
-        data = [
-            (fld, editor.mw.col.media.escapeImages(val))
-            for fld, val in editor.note.items()
-        ]
-
-    fillAllFields(editor, entry, data)
+	if choice != None:
+		entry = results[choice]
+		data = [(fld, editor.mw.col.media.escapeImages(val)) for fld, val in editor.note.items()]
+		fillAllFields(editor, entry, data, mainConfig)
 
 
-def fillAllFields(editor, entry, data):
+def fillAllFields(editor, entry, data, config):
 
-    if len(entry.kanjiList) > 0:
-            mainKanji = entry.kanjiList[0]
-    else:
-        mainKanji = entry.kanaList[0]
-    updateField(editor, data, mainKanjiFN, mainKanji)
+	if len(entry.kanjiList) > 0:
+		mainKanji = entry.kanjiList[0]
+	else:
+		mainKanji = entry.kanaList[0]
+	updateField(editor, data, config.mainKanjiFN, mainKanji)
 
-    updateField(editor, data, mainKanaFN, entry.kanaList[0])
-    updateField(editor, data, POSFN, entry.getPOSHTML())
-    updateField(editor, data, glossFN, entry.getSenseHTML())
-    updateField(editor, data, altKanjiFN, entry.getAltKanjiHTML())
-    updateField(editor, data, altKanaFN, entry.getAltKanaHTML())
-    updateField(editor, data, entryIDFN, entry.getEntryID())
-
-def fillAllFieldsByKanjiKana(editor):
-
-    data = [
-            (fld, editor.mw.col.media.escapeImages(val))
-            for fld, val in editor.note.items()
-        ]
-
-    kanjiText = ""
-    kanaText = ""
-
-    for i in range(len(data)):
-        if data[i][0] == mainKanjiFN:
-            kanjiText = data[i][1]
-        if data[i][0] == mainKanaFN:
-            kanaText = data[i][1]
-
-    results = getKanjiKanaEntryIDS(kanjiText, kanaText, dicPath)
-
-    if len(results) == 1:
-        entry = dicEntry(results[0], dicPath)
-        fillAllFields(editor, entry, data)
+	updateField(editor, data, config.mainKanaFN, entry.kanaList[0])
+	updateField(editor, data, config.POSFN, entry.getPOSHTML())
+	updateField(editor, data, config.glossFN, entry.getSenseHTML())
+	updateField(editor, data, config.altKanjiFN, entry.getAltKanjiHTML())
+	updateField(editor, data, config.altKanaFN, entry.getAltKanaHTML())
+	updateField(editor, data, config.entryIDFN, entry.getEntryID())
 
 
-def fillEntryIDByKanjiKana(editor):
+# def fillAllFieldsByKanjiKana(editor):
 
-    data = [
-            (fld, editor.mw.col.media.escapeImages(val))
-            for fld, val in editor.note.items()
-        ]
+#     data = [
+#             (fld, editor.mw.col.media.escapeImages(val))
+#             for fld, val in editor.note.items()
+#         ]
 
-    kanjiText = ""
-    kanaText = ""
+#     kanjiText = ""
+#     kanaText = ""
 
-    for i in range(len(data)):
-        if data[i][0] == mainKanjiFN:
-            kanjiText = data[i][1]
-        if data[i][0] == mainKanaFN:
-            kanaText = data[i][1]
+#     for i in range(len(data)):
+#         if data[i][0] == mainKanjiFN:
+#             kanjiText = data[i][1]
+#         if data[i][0] == mainKanaFN:
+#             kanaText = data[i][1]
 
-    results = getKanjiKanaEntryIDS(kanjiText, kanaText, dicPath)
+#     results = getKanjiKanaEntryIDS(kanjiText, kanaText, dicPath)
 
-    if len(results) == 1:
-        entry = dicEntry(results[0], dicPath)
-        updateField(editor, data, entryIDFN, entry.getEntryID())
+#     if len(results) == 1:
+#         entry = dicEntry(results[0], dicPath)
+#         fillAllFields(editor, entry, data)
 
 
-def fillAllFieldsbyEntryID(editor):
+# def fillEntryIDByKanjiKana(editor):
 
-    eID = ""
+#     data = [
+#             (fld, editor.mw.col.media.escapeImages(val))
+#             for fld, val in editor.note.items()
+#         ]
 
-    data = [
-            (fld, editor.mw.col.media.escapeImages(val))
-            for fld, val in editor.note.items()
-        ]
+#     kanjiText = ""
+#     kanaText = ""
 
-    for i in range(len(data)):
-        if data[i][0] == entryIDFN:
-            eID = data[i][1]
+#     for i in range(len(data)):
+#         if data[i][0] == mainKanjiFN:
+#             kanjiText = data[i][1]
+#         if data[i][0] == mainKanaFN:
+#             kanaText = data[i][1]
 
-    if eID != "":
+#     results = getKanjiKanaEntryIDS(kanjiText, kanaText, dicPath)
 
-        entry = dicEntry(eID, dicPath)
-        fillAllFields(editor, entry, data)
+#     if len(results) == 1:
+#         entry = dicEntry(results[0], dicPath)
+#         updateField(editor, data, entryIDFN, entry.getEntryID())
 
-def addJMdictButton(buttons, editor):
-    # environment
-    collection_path = mw.col.path
-    plugin_dir_name = __name__
 
-    user_dir_path = os.path.split(collection_path)[0]
-    anki_dir_path = os.path.split(user_dir_path)[0]
-    plugin_dir_path = os.path.join(anki_dir_path, 'addons21', plugin_dir_name)
-    icon_path = os.path.join(plugin_dir_path, 'icon.png')
+# def fillAllFieldsbyEntryID(editor):
 
-    btn = editor.addButton(icon=icon_path,
-                         cmd='foo',
-                         func=lookup,
-                         tip='search JMdict　(⌘J)',
-                         keys=QKeySequence('Ctrl+J')
-                         )
-    buttons.append(btn)
+#     eID = ""
+
+#     data = [
+#             (fld, editor.mw.col.media.escapeImages(val))
+#             for fld, val in editor.note.items()
+#         ]
+
+#     for i in range(len(data)):
+#         if data[i][0] == entryIDFN:
+#             eID = data[i][1]
+
+#     if eID != "":
+
+#         entry = dicEntry(eID, dicPath)
+#         fillAllFields(editor, entry, data)
 
 
 
 def addEntryIDByMainKanjiKana():
 
-    deckID = select_deck_id('Which deck would you like to add IDs to?')
-    if deckID == None:
-        return
-    note_type_ids = getNoteTypes(deckID)
-    # TODO add new note ids
-    noteTypeID = note_type_ids[0]
-    noteIDs = getNoteIDs(deckID, noteTypeID)
-    for noteID in noteIDs:
-        updateNote_entryID_KanjiKana(noteID)
+	deckID = select_deck_id('Which deck would you like to add IDs to?')
+	if deckID == None:
+		return
+	note_type_ids = getNoteTypes(deckID)
+	# TODO add new note ids
+	noteTypeID = note_type_ids[0]
+	noteIDs = getNoteIDs(deckID, noteTypeID)
+	for noteID in noteIDs:
+		updateNote_entryID_KanjiKana(noteID, mainConfig)
 
 
 def updateEntryies_entryID():
 
-    deckID = select_deck_id('Which deck would you like to add IDs to?')
-    if deckID == None:
-        return
-    note_type_ids = getNoteTypes(deckID)
-    # TODO add new note ids
-    noteTypeID = note_type_ids[0]
-    noteIDs = getNoteIDs(deckID, noteTypeID)
-    for noteID in noteIDs:
-        updateNote_all_entryID(noteID)
+	deckID = select_deck_id('Which deck would you update by entryID?')
+	if deckID == None:
+		return
+	note_type_ids = getNoteTypes(deckID)
+	# TODO add new note ids
+	noteTypeID = note_type_ids[0]
+	noteIDs = getNoteIDs(deckID, noteTypeID)
+	for noteID in noteIDs:
+		updateNote_all_entryID(noteID, mainConfig)
 
 
+def addJMdictButton(buttons, editor):
+    # environment
+	collection_path = mw.col.path
+	plugin_dir_name = __name__
 
-def getNoteIDs(deckID, noteTypeID):
+	user_dir_path = os.path.split(collection_path)[0]
+	anki_dir_path = os.path.split(user_dir_path)[0]
+	plugin_dir_path = os.path.join(anki_dir_path, 'addons21', plugin_dir_name)
+	icon_path = os.path.join(plugin_dir_path, 'icon.png')
 
-    noteIDs = []
-    for row in mw.col.db.execute(
-        'SELECT id FROM notes WHERE mid = ? AND id IN (SELECT nid FROM'
-        ' cards WHERE did = ?) ORDER BY id', noteTypeID, deckID):
-        nid = row[0]
-        noteIDs.append(nid)
-    return noteIDs
-
-
-def getNoteTypes(deckID):
-
-    noteTypes = []
-
-    for row in mw.col.db.execute(
-        'SELECT distinct mid FROM notes WHERE id IN (SELECT nid FROM'
-        ' cards WHERE did = ?) ORDER BY id', deckID):
-        mid = row[0]
-        noteTypes.append(mid)
-
-    return noteTypes
-
-
-def updateNote_entryID_KanjiKana(noteID):
-
-    # All fields are bundled
-    row = mw.col.db.first(
-            'SELECT flds FROM notes WHERE id = ?', noteID
-            )
-    flds_str = row[0]
-    # \x1f to separate bundled fields
-    fields = flds_str.split('\x1f')
-
-    # Figure out mainKanji
-    mainKanji_idx = mw.col.db.first('SELECT ord FROM fields WHERE name = ? AND ntid IN (SELECT mid FROM notes WHERE id = ?)', mainKanjiFN, noteID)[0]
-    # Figure out mainKana
-    mainKana_idx = mw.col.db.first('SELECT ord FROM fields WHERE name = ? AND ntid IN (SELECT mid FROM notes WHERE id = ?)', mainKanaFN, noteID)[0]
-    # Figure out the index of the entryID field
-    eID_idx = mw.col.db.first('SELECT ord FROM fields WHERE name = ? AND ntid IN (SELECT mid FROM notes WHERE id = ?)', entryIDFN , noteID)[0]
-
-    mainKanji_str = fields[mainKanji_idx]
-    mainKana_str = fields[mainKana_idx]
-
-    entryIDs = getKanjiKanaEntryIDS(mainKanji_str, mainKana_str, dicPath)
-    if len(entryIDs) == 1:
-
-        fields[eID_idx] = str(entryIDs[0][0])
-
-        newFieldsStr = '\x1f'.join(fields)
-        mod_time = int(time.time())
-        mw.col.db.execute(
-            'UPDATE notes SET usn = ?, mod = ?, flds = ? WHERE id = ?',
-            -1, mod_time, newFieldsStr, noteID
-            )
-
-
-def updateNote_all_entryID(noteID):
-
-    # All fields are bundled
-    row = mw.col.db.first(
-            'SELECT flds FROM notes WHERE id = ?', noteID
-            )
-    flds_str = row[0]
-    # \x1f to separate bundled fields
-    fields = flds_str.split('\x1f')
-
-    # Figure out the index of the entryID field
-    eID_idx = mw.col.db.first('SELECT ord FROM fields WHERE name = ? AND ntid IN (SELECT mid FROM notes WHERE id = ?)', entryIDFN , noteID)[0]
-
-    entryID = fields[eID_idx]
-
-    if entryID != "":
-
-        entry = dicEntry(entryID, dicPath)
-
-        # Figure out mainKanji
-        mainKanji_idx = mw.col.db.first('SELECT ord FROM fields WHERE name = ? AND ntid IN (SELECT mid FROM notes WHERE id = ?)', mainKanjiFN, noteID)[0]
-        # Etc.
-        mainKana_idx = mw.col.db.first('SELECT ord FROM fields WHERE name = ? AND ntid IN (SELECT mid FROM notes WHERE id = ?)', mainKanaFN, noteID)[0]
-        POS_idx = mw.col.db.first('SELECT ord FROM fields WHERE name = ? AND ntid IN (SELECT mid FROM notes WHERE id = ?)', POSFN, noteID)[0]
-        gloss_idx = mw.col.db.first('SELECT ord FROM fields WHERE name = ? AND ntid IN (SELECT mid FROM notes WHERE id = ?)', glossFN, noteID)[0]
-        altKanjiFN_idx = mw.col.db.first('SELECT ord FROM fields WHERE name = ? AND ntid IN (SELECT mid FROM notes WHERE id = ?)', altKanjiFN, noteID)[0]
-        altKanaFN_idx = mw.col.db.first('SELECT ord FROM fields WHERE name = ? AND ntid IN (SELECT mid FROM notes WHERE id = ?)', altKanaFN, noteID)[0]
-
-
-        if len(entry.kanjiList) > 0:
-            fields[mainKanji_idx] = entry.kanjiList[0]
-        else:
-            fields[mainKanji_idx] = entry.kanaList[0]
-
-        fields[mainKana_idx] = entry.kanaList[0]
-        fields[POS_idx] = entry.getPOSHTML()
-        fields[gloss_idx] = entry.getSenseHTML()
-        fields[altKanjiFN_idx] = entry.getAltKanjiHTML()
-        fields[altKanaFN_idx] = entry.getAltKanaHTML()
-
-        newFieldsStr = '\x1f'.join(fields)
-        mod_time = int(time.time())
-        mw.col.db.execute(
-            'UPDATE notes SET usn = ?, mod = ?, flds = ? WHERE id = ?',
-            -1, mod_time, newFieldsStr, noteID
-            )
-
+	btn = editor.addButton(icon=icon_path,
+												 cmd='foo',
+												 func=lookup,
+												 tip='search JMdict　(⌘J)',
+												 keys=QKeySequence('Ctrl+J')
+	 )
+	buttons.append(btn)
 
 
 # add editor button
@@ -329,11 +227,5 @@ sJDI_menu_test.triggered.connect(addEntryIDByMainKanjiKana)
 sJDI_menu_test = sJDI_menu.addAction('Redo notes by entryID')
 sJDI_menu_test.triggered.connect(updateEntryies_entryID)
 
-
-
-
 mw.form.menuTools.addMenu(sJDI_menu)
 
-
-
-setDefaults(configFile)
