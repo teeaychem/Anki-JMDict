@@ -2,14 +2,13 @@
 Interaction with anki
 """
 
-
 import time
 import sqlite3
 import json
 from aqt.utils import chooseList
 from aqt import mw, gui_hooks
 
-from .databaseUtil import *
+from .search import *
 
 
 def updateField(editor, data, fieldID, newVal):

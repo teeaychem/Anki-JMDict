@@ -10,45 +10,10 @@ from aqt import mw, gui_hooks
 from aqt.utils import showInfo, getText
 from aqt.qt import *
 from anki.storage import Collection
-from .util import *
+
+from .search import *
 from .ankiInteraction import *
-from .databaseUtil import *
-
-class Config:
-	def __init__(self):
-		self.mainKanjiFN = ""
-		self.mainKanaFN = ""
-		self.POSFN = ""
-		self.glossFN = ""
-		self.altKanjiFN = ""
-		self.altKanaFN = ""
-		self.entryIDFN = ""
-		self.dicPath = ""
-
-	def setByJSON(self, configName):
-
-		mainPath = os.path.dirname(__file__)
-		configRaw = open(os.path.join(mainPath, configName), encoding='utf-8')
-		configJSON = json.load(configRaw)
-
-		ankiFields = configJSON['ankiFields']
-
-		if ankiFields['mainKanji']:
-			self.mainKanjiFN = ankiFields['mainKanji']
-		if ankiFields['mainKana']:
-			self.mainKanaFN = ankiFields['mainKana']
-		if ankiFields['partOfSpeech']:
-			self.POSFN = ankiFields['partOfSpeech']
-		if ankiFields['gloss']:
-			self.glossFN = ankiFields['gloss']
-		if ankiFields['altKanji']:
-			self.altKanjiFN = ankiFields['altKanji']
-		if ankiFields['altKana']:
-			self.altKanaFN = ankiFields['altKana']
-		if ankiFields['id']:
-			self.entryIDFN = ankiFields['id']
-
-		self.dicPath = os.path.join(mainPath, configJSON['dictionary'])
+from .classes.configC import *
 
 
 
@@ -59,6 +24,8 @@ mainConfig.setByJSON(configFile)
 
 
 def getResults(searchTerm, config):
+	# Return list of dicEntries which match searchTerm.
+	# Config specifies db to use
 
 	results = []
 	entryIDs = getEntryIDS(searchTerm, config.dicPath)
@@ -228,4 +195,3 @@ sJDI_menu_test = sJDI_menu.addAction('Redo notes by entryID')
 sJDI_menu_test.triggered.connect(updateEntryies_entryID)
 
 mw.form.menuTools.addMenu(sJDI_menu)
-
